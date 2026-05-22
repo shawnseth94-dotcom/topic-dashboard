@@ -131,6 +131,16 @@ def generate_html(topics):
     .stxt{{font-size:.96rem;line-height:1.68;color:var(--text2)}}
     .sq{{background:rgba(0,122,255,.06);border-radius:12px;padding:14px 16px;font-style:italic;font-size:.93rem;line-height:1.6;color:#444}}
     .sf{{font-size:.77rem;color:var(--muted);padding-top:18px;border-top:.5px solid rgba(0,0,0,.08);display:flex;gap:14px;flex-wrap:wrap}}
+    .s-actions{{padding:16px 28px;border-top:.5px solid rgba(0,0,0,.08);display:flex;gap:8px;flex-wrap:wrap;align-items:center}}
+    .s-actions-label{{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-right:4px}}
+    .sab{{border:none;cursor:pointer;font-family:inherit;font-size:.84rem;font-weight:500;padding:7px 16px;border-radius:10px;background:#f5f5f7;color:var(--text);transition:all .15s}}
+    .sab:hover{{background:#e5e5ea}}.sab.cur{{background:var(--blue);color:#fff}}
+    .sab.s-已发布{{background:rgba(52,199,89,.12);color:#1f7a3a}}.sab.s-已发布:hover{{background:rgba(52,199,89,.22)}}
+    .sab.s-写作中{{background:rgba(0,122,255,.1);color:var(--blue)}}.sab.s-写作中:hover{{background:rgba(0,122,255,.18)}}
+    .sab.s-待执行{{background:rgba(255,149,0,.1);color:#b36800}}.sab.s-待执行:hover{{background:rgba(255,149,0,.18)}}
+    .sab.s-搁置{{background:#f0f0f0;color:#888}}.sab.s-搁置:hover{{background:#e5e5ea}}
+    .toast{{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(8px);background:#1c1c1e;color:#fff;padding:11px 22px;border-radius:14px;font-size:.86rem;font-weight:500;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:999;white-space:nowrap}}
+    .toast.show{{opacity:1;transform:translateX(-50%) translateY(0)}}
   </style>
 </head>
 <body>
@@ -156,11 +166,16 @@ def generate_html(topics):
   <div class="grid" id="grid"></div>
 </div>
 <div class="overlay" id="overlay" onclick="closeSheet(event)">
-  <div class="sheet"><div class="sh"><button class="sc" onclick="closeSheet()">✕</button><div class="st" id="s-title"></div><div class="stags" id="s-tags"></div><div class="sr"></div></div><div class="sb2" id="s-body"></div></div>
+  <div class="sheet"><div class="sh"><button class="sc" onclick="closeSheet()">✕</button><div class="st" id="s-title"></div><div class="stags" id="s-tags"></div><div class="sr"></div></div><div id="s-actions" style="display:none" class="s-actions"></div><div class="sb2" id="s-body"></div></div>
 </div>
+<div class="toast" id="toast"></div>
 <script>
-const D={topics_json};let sf='';let hidden=new Set(JSON.parse(localStorage.getItem('hidden_topics')||'[]'));
-function delCard(e,fn){{e.stopPropagation();hidden.add(fn);localStorage.setItem('hidden_topics',JSON.stringify([...hidden]));render();}}
+const D={topics_json};let sf='',curIdx=-1;
+const IS_LOCAL=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+let hidden=new Set(JSON.parse(localStorage.getItem('hidden_topics')||'[]'));
+function showToast(msg){{const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200);}}
+function delCard(e,fn){{e.stopPropagation();if(IS_LOCAL){{if(!confirm('确认删除这张选题卡？此操作不可撤销'))return;fetch('http://localhost:8888/delete',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{filename:fn}})}}).then(r=>r.ok?location.reload():showToast('删除失败')).catch(()=>showToast('本地服务未启动'));}}else{{hidden.add(fn);localStorage.setItem('hidden_topics',JSON.stringify([...hidden]));render();}}}}
+async function setStatus(status){{if(curIdx<0)return;const t=D[curIdx];try{{const r=await fetch('http://localhost:8888/update',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{filename:t.filename,field:'状态',value:status}})}});if(r.ok){{showToast('已标记为「'+status+'」');setTimeout(()=>location.reload(),800);}}else showToast('更新失败');}}catch{{showToast('本地服务未启动，请运行 local_api.py');}}}}
 
 function pick(b){{document.querySelectorAll('#seg .sb').forEach(x=>x.classList.remove('on'));b.classList.add('on');sf=b.dataset.v;render();}}
 function render(){{
@@ -185,9 +200,11 @@ function render(){{
   g.innerHTML=list.map((t,_,arr)=>`<div class="card" onclick="openSheet(${{D.indexOf(t)}})"><button class="card-del" onclick="delCard(event,'${{t.filename}}')">✕</button><div class="card-tags"><span class="tag t-${{t['状态']}}">${{t['状态']}}</span><span class="tag t-${{t['优先级']}}">${{t['优先级']}}</span><span class="tag t-p">${{t['平台']}}</span></div><div class="card-title">${{t.title||t.filename}}</div>${{t.core_point?`<div class="card-body">${{t.core_point}}</div>`:''}}`+`${{t.opening?`<div class="card-hook">${{t.opening}}</div>`:''}}<div class="card-meta">${{t['创建日期']}}${{t['渠道']?'  ·  '+t['渠道']:''}}${{t['来源']?'  ·  '+t['来源']:''}}</div></div>`).join('');
 }}
 function openSheet(i){{
-  const t=D[i];
+  curIdx=i;const t=D[i];
   document.getElementById('s-title').textContent=t.title||t.filename;
   document.getElementById('s-tags').innerHTML=`<span class="tag t-${{t['状态']}}">${{t['状态']}}</span><span class="tag t-${{t['优先级']}}">${{t['优先级']}}</span><span class="tag t-p">${{t['平台']}}</span>`;
+  const sa=document.getElementById('s-actions');
+  if(IS_LOCAL){{const statuses=['待执行','写作中','已发布','搁置'];sa.innerHTML='<span class="s-actions-label">标记为</span>'+statuses.map(s=>`<button class="sab s-${{s}}${{t['状态']===s?' cur':''}}" onclick="setStatus('${{s}}')">${{s}}</button>`).join('');sa.style.display='flex';}}else{{sa.style.display='none';}}
   document.getElementById('s-body').innerHTML=`${{t.core_point?`<div class="srow"><span class="slbl">核心观点</span><p class="stxt">${{t.core_point}}</p></div>`:''}}`+`${{t.opening?`<div class="srow"><span class="slbl">开头第一句</span><div class="sq">${{t.opening}}</div></div>`:''}}<div class="sf">${{t['创建日期']?`<span>${{t['创建日期']}}</span>`:''}}</div>`;
   document.getElementById('overlay').classList.add('on');
 }}
