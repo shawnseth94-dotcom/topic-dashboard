@@ -61,6 +61,8 @@ def generate_html(topics):
     waiting = sum(1 for t in topics if t["状态"] == "待执行")
     writing = sum(1 for t in topics if t["状态"] == "写作中")
     done = sum(1 for t in topics if t["状态"] == "已发布")
+    sources = sorted(set(t["来源"] for t in topics if t["来源"]))
+    source_options = "\n".join(f'<option value="{s}">{s}</option>' for s in sources)
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -145,6 +147,7 @@ def generate_html(topics):
     <div class="seg" id="seg"><button class="sb on" data-v="" onclick="pick(this)">全部</button><button class="sb" data-v="待执行" onclick="pick(this)">待执行</button><button class="sb" data-v="写作中" onclick="pick(this)">写作中</button><button class="sb" data-v="已发布" onclick="pick(this)">已发布</button></div>
     <select class="ps" id="fPri" onchange="render()"><option value="">全部优先级</option><option value="高">高</option><option value="中">中</option><option value="低">低</option></select>
     <select class="ps" id="fPlt" onchange="render()"><option value="">全部平台</option><option value="公众号">公众号</option><option value="小红书">小红书</option><option value="两个都发">两个都发</option></select>
+    <select class="ps" id="fSrc" onchange="render()"><option value="">全部来源</option>{source_options}</select>
     <span class="rc" id="cnt"></span>
   </div>
   <div class="grid" id="grid"></div>
@@ -159,10 +162,12 @@ function render(){{
   const q=document.getElementById('search').value.toLowerCase();
   const pr=document.getElementById('fPri').value;
   const pl=document.getElementById('fPlt').value;
+  const src=document.getElementById('fSrc').value;
   let list=D.filter(t=>{{
     if(sf&&t['状态']!==sf)return false;
     if(pr&&t['优先级']!==pr)return false;
     if(pl&&!t['平台'].includes(pl))return false;
+    if(src&&t['来源']!==src)return false;
     if(q&&!(t.title+t.core_point+t.opening+t['来源']).toLowerCase().includes(q))return false;
     return true;
   }});
