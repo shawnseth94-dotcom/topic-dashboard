@@ -174,8 +174,8 @@ const D={topics_json};let sf='',curIdx=-1;
 const IS_LOCAL=location.hostname==='localhost'||location.hostname==='127.0.0.1';
 let hidden=new Set(JSON.parse(localStorage.getItem('hidden_topics')||'[]'));
 function showToast(msg){{const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200);}}
-function delCard(e,fn){{e.stopPropagation();if(IS_LOCAL){{if(!confirm('确认删除这张选题卡？此操作不可撤销'))return;fetch('http://localhost:8888/delete',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{filename:fn}})}}).then(r=>r.ok?location.reload():showToast('删除失败')).catch(()=>showToast('本地服务未启动'));}}else{{hidden.add(fn);localStorage.setItem('hidden_topics',JSON.stringify([...hidden]));render();}}}}
-async function setStatus(status){{if(curIdx<0)return;const t=D[curIdx];try{{const r=await fetch('http://localhost:8888/update',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{filename:t.filename,field:'状态',value:status}})}});if(r.ok){{showToast('已标记为「'+status+'」');setTimeout(()=>location.reload(),800);}}else showToast('更新失败');}}catch{{showToast('本地服务未启动，请运行 local_api.py');}}}}
+function delCard(e,fn){{e.stopPropagation();if(IS_LOCAL){{if(!confirm('确认删除这张选题卡？此操作不可撤销'))return;fetch('http://localhost:7777/delete',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{filename:fn}})}}).then(r=>r.ok?location.reload():showToast('删除失败')).catch(()=>showToast('本地服务未启动'));}}else{{hidden.add(fn);localStorage.setItem('hidden_topics',JSON.stringify([...hidden]));render();}}}}
+async function setStatus(status){{if(curIdx<0)return;const t=D[curIdx];try{{const r=await fetch('http://localhost:7777/update',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{filename:t.filename,field:'状态',value:status}})}});if(r.ok){{showToast('已标记为「'+status+'」');setTimeout(()=>location.reload(),800);}}else showToast('更新失败');}}catch{{showToast('本地服务未启动，请运行 local_api.py');}}}}
 
 function pick(b){{document.querySelectorAll('#seg .sb').forEach(x=>x.classList.remove('on'));b.classList.add('on');sf=b.dataset.v;render();}}
 function render(){{
@@ -204,7 +204,7 @@ function openSheet(i){{
   document.getElementById('s-title').textContent=t.title||t.filename;
   document.getElementById('s-tags').innerHTML=`<span class="tag t-${{t['状态']}}">${{t['状态']}}</span><span class="tag t-${{t['优先级']}}">${{t['优先级']}}</span><span class="tag t-p">${{t['平台']}}</span>`;
   const sa=document.getElementById('s-actions');
-  if(IS_LOCAL){{const statuses=['待执行','写作中','已发布','搁置'];sa.innerHTML='<span class="s-actions-label">标记为</span>'+statuses.map(s=>`<button class="sab s-${{s}}${{t['状态']===s?' cur':''}}" onclick="setStatus('${{s}}')">${{s}}</button>`).join('');sa.style.display='flex';}}else{{sa.style.display='none';}}
+  if(IS_LOCAL){{const statuses=['待执行','写作中','已发布','搁置'];sa.innerHTML='<span class="s-actions-label">标记为</span>'+statuses.map(s=>`<button class="sab s-${{s}}${{t['状态']===s?' cur':''}}" onclick="setStatus('${{s}}')">${{s}}</button>`).join('')+'<a class="sab" style="margin-left:auto;text-decoration:none;background:var(--blue);color:#fff" href="/write?file='+encodeURIComponent(t.filename)+'" target="_blank">✏️ 开始写作</a>';sa.style.display='flex';}}else{{sa.style.display='none';}}
   document.getElementById('s-body').innerHTML=`${{t.core_point?`<div class="srow"><span class="slbl">核心观点</span><p class="stxt">${{t.core_point}}</p></div>`:''}}`+`${{t.opening?`<div class="srow"><span class="slbl">开头第一句</span><div class="sq">${{t.opening}}</div></div>`:''}}<div class="sf">${{t['创建日期']?`<span>${{t['创建日期']}}</span>`:''}}</div>`;
   document.getElementById('overlay').classList.add('on');
 }}
