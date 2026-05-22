@@ -20,7 +20,7 @@ def parse_md(filepath):
     topic = {
         "filename": os.path.basename(filepath),
         "状态": "待执行", "平台": "-", "优先级": "中",
-        "创建日期": "", "来源": "", "title": "", "core_point": "", "opening": "",
+        "创建日期": "", "来源": "", "渠道": "", "title": "", "core_point": "", "opening": "",
     }
 
     fm_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
@@ -61,8 +61,8 @@ def generate_html(topics):
     waiting = sum(1 for t in topics if t["状态"] == "待执行")
     writing = sum(1 for t in topics if t["状态"] == "写作中")
     done = sum(1 for t in topics if t["状态"] == "已发布")
-    sources = sorted(set(t["来源"] for t in topics if t["来源"]))
-    source_options = "\n".join(f'<option value="{s}">{s}</option>' for s in sources)
+    channels = sorted(set(t["渠道"] for t in topics if t["渠道"]))
+    channel_options = "\n".join(f'<option value="{s}">{s}</option>' for s in channels)
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -147,7 +147,7 @@ def generate_html(topics):
     <div class="seg" id="seg"><button class="sb on" data-v="" onclick="pick(this)">全部</button><button class="sb" data-v="待执行" onclick="pick(this)">待执行</button><button class="sb" data-v="写作中" onclick="pick(this)">写作中</button><button class="sb" data-v="已发布" onclick="pick(this)">已发布</button></div>
     <select class="ps" id="fPri" onchange="render()"><option value="">全部优先级</option><option value="高">高</option><option value="中">中</option><option value="低">低</option></select>
     <select class="ps" id="fPlt" onchange="render()"><option value="">全部平台</option><option value="公众号">公众号</option><option value="小红书">小红书</option><option value="两个都发">两个都发</option></select>
-    <select class="ps" id="fSrc" onchange="render()"><option value="">全部来源</option>{source_options}</select>
+    <select class="ps" id="fCh" onchange="render()"><option value="">全部渠道</option>{channel_options}</select>
     <span class="rc" id="cnt"></span>
   </div>
   <div class="grid" id="grid"></div>
@@ -162,12 +162,12 @@ function render(){{
   const q=document.getElementById('search').value.toLowerCase();
   const pr=document.getElementById('fPri').value;
   const pl=document.getElementById('fPlt').value;
-  const src=document.getElementById('fSrc').value;
+  const ch=document.getElementById('fCh').value;
   let list=D.filter(t=>{{
     if(sf&&t['状态']!==sf)return false;
     if(pr&&t['优先级']!==pr)return false;
     if(pl&&!t['平台'].includes(pl))return false;
-    if(src&&t['来源']!==src)return false;
+    if(ch&&t['渠道']!==ch)return false;
     if(q&&!(t.title+t.core_point+t.opening+t['来源']).toLowerCase().includes(q))return false;
     return true;
   }});
@@ -176,7 +176,7 @@ function render(){{
   document.getElementById('cnt').textContent=list.length+' 个选题';
   const g=document.getElementById('grid');
   if(!list.length){{g.innerHTML='<div class="empty"><div style="font-size:2.5rem;opacity:.5;margin-bottom:10px">📭</div><p>没有符合条件的选题</p></div>';return;}}
-  g.innerHTML=list.map((t,_,arr)=>`<div class="card" onclick="openSheet(${{D.indexOf(t)}})"><div class="card-tags"><span class="tag t-${{t['状态']}}">${{t['状态']}}</span><span class="tag t-${{t['优先级']}}">${{t['优先级']}}</span><span class="tag t-p">${{t['平台']}}</span></div><div class="card-title">${{t.title||t.filename}}</div>${{t.core_point?`<div class="card-body">${{t.core_point}}</div>`:''}}`+`${{t.opening?`<div class="card-hook">${{t.opening}}</div>`:''}}<div class="card-meta">${{t['创建日期']}}${{t['来源']?'  ·  '+t['来源']:''}}</div></div>`).join('');
+  g.innerHTML=list.map((t,_,arr)=>`<div class="card" onclick="openSheet(${{D.indexOf(t)}})"><div class="card-tags"><span class="tag t-${{t['状态']}}">${{t['状态']}}</span><span class="tag t-${{t['优先级']}}">${{t['优先级']}}</span><span class="tag t-p">${{t['平台']}}</span></div><div class="card-title">${{t.title||t.filename}}</div>${{t.core_point?`<div class="card-body">${{t.core_point}}</div>`:''}}`+`${{t.opening?`<div class="card-hook">${{t.opening}}</div>`:''}}<div class="card-meta">${{t['创建日期']}}${{t['渠道']?'  ·  '+t['渠道']:''}}${{t['来源']?'  ·  '+t['来源']:''}}</div></div>`).join('');
 }}
 function openSheet(i){{
   const t=D[i];
