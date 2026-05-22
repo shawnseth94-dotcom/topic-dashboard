@@ -112,6 +112,9 @@ def generate_html(topics):
     .card-body{{font-size:.84rem;color:var(--muted);line-height:1.55;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
     .card-hook{{font-size:.81rem;color:#555;background:rgba(0,122,255,.06);border-radius:8px;padding:8px 12px;line-height:1.5;font-style:italic;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
     .card-meta{{font-size:.72rem;color:var(--muted);margin-top:14px}}
+    .card-del{{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:transparent;border:none;cursor:pointer;font-size:.8rem;color:var(--muted);display:none;align-items:center;justify-content:center;transition:all .15s}}
+    .card-del:hover{{background:rgba(255,59,48,.12);color:var(--red)}}
+    .card{{position:relative}}.card:hover .card-del{{display:flex}}
     .empty{{grid-column:1/-1;background:#fff;text-align:center;padding:80px 20px;color:var(--muted);border-radius:18px}}
     .overlay{{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:200;align-items:center;justify-content:center;padding:20px}}
     .overlay.on{{display:flex}}
@@ -156,7 +159,9 @@ def generate_html(topics):
   <div class="sheet"><div class="sh"><button class="sc" onclick="closeSheet()">✕</button><div class="st" id="s-title"></div><div class="stags" id="s-tags"></div><div class="sr"></div></div><div class="sb2" id="s-body"></div></div>
 </div>
 <script>
-const D={topics_json};let sf='';
+const D={topics_json};let sf='';let hidden=new Set(JSON.parse(localStorage.getItem('hidden_topics')||'[]'));
+function delCard(e,fn){{e.stopPropagation();hidden.add(fn);localStorage.setItem('hidden_topics',JSON.stringify([...hidden]));render();}}
+
 function pick(b){{document.querySelectorAll('#seg .sb').forEach(x=>x.classList.remove('on'));b.classList.add('on');sf=b.dataset.v;render();}}
 function render(){{
   const q=document.getElementById('search').value.toLowerCase();
@@ -164,6 +169,7 @@ function render(){{
   const pl=document.getElementById('fPlt').value;
   const ch=document.getElementById('fCh').value;
   let list=D.filter(t=>{{
+    if(hidden.has(t.filename))return false;
     if(sf&&t['状态']!==sf)return false;
     if(pr&&t['优先级']!==pr)return false;
     if(pl&&!t['平台'].includes(pl))return false;
@@ -176,7 +182,7 @@ function render(){{
   document.getElementById('cnt').textContent=list.length+' 个选题';
   const g=document.getElementById('grid');
   if(!list.length){{g.innerHTML='<div class="empty"><div style="font-size:2.5rem;opacity:.5;margin-bottom:10px">📭</div><p>没有符合条件的选题</p></div>';return;}}
-  g.innerHTML=list.map((t,_,arr)=>`<div class="card" onclick="openSheet(${{D.indexOf(t)}})"><div class="card-tags"><span class="tag t-${{t['状态']}}">${{t['状态']}}</span><span class="tag t-${{t['优先级']}}">${{t['优先级']}}</span><span class="tag t-p">${{t['平台']}}</span></div><div class="card-title">${{t.title||t.filename}}</div>${{t.core_point?`<div class="card-body">${{t.core_point}}</div>`:''}}`+`${{t.opening?`<div class="card-hook">${{t.opening}}</div>`:''}}<div class="card-meta">${{t['创建日期']}}${{t['渠道']?'  ·  '+t['渠道']:''}}${{t['来源']?'  ·  '+t['来源']:''}}</div></div>`).join('');
+  g.innerHTML=list.map((t,_,arr)=>`<div class="card" onclick="openSheet(${{D.indexOf(t)}})"><button class="card-del" onclick="delCard(event,'${{t.filename}}')">✕</button><div class="card-tags"><span class="tag t-${{t['状态']}}">${{t['状态']}}</span><span class="tag t-${{t['优先级']}}">${{t['优先级']}}</span><span class="tag t-p">${{t['平台']}}</span></div><div class="card-title">${{t.title||t.filename}}</div>${{t.core_point?`<div class="card-body">${{t.core_point}}</div>`:''}}`+`${{t.opening?`<div class="card-hook">${{t.opening}}</div>`:''}}<div class="card-meta">${{t['创建日期']}}${{t['渠道']?'  ·  '+t['渠道']:''}}${{t['来源']?'  ·  '+t['来源']:''}}</div></div>`).join('');
 }}
 function openSheet(i){{
   const t=D[i];
